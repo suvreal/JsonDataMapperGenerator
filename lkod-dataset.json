@@ -1,0 +1,23 @@
+{
+  "@context": "https://ofn.gov.cz/rozhraní-katalogů-otevřených-dat/2021-01-11/kontexty/rozhraní-katalogů-otevřených-dat.jsonld",
+  "iri": "[lkod:iri]",
+  "typ": "Datová sada",
+  "poskytovatel": "https://rpp-opendata.egon.gov.cz/odrpp/zdroj/orgán-veřejné-moci",
+  "název": {
+    "cs": "[lkod:title]"
+  },
+  "popis": {
+    "cs": "[lkod:description]"
+  },
+  "klíčové_slovo": {
+    "cs": "[lkod:keyword]"
+  },
+  "téma": [
+    "[lkod:theme]"
+  ],
+  "periodicita_aktualizace": "[lkod:periodicity]",
+  "prvek_rúian": [
+    "[lkod:spatial]"
+  ],
+  "distribuce": [[lkod:distributions]]
+}
