@@ -77,12 +77,15 @@ function removeGeneratedContents(): void
  */
 function addContentsToGeneratedFolder(string $fileName, string $fileExtension, string $fileContent): bool
 {
-    if(file_exists(constant("GENERATED_FILE_RESULT"))){
-        if(fopen(constant("GENERATED_FILE_RESULT")."/".$fileName.$fileExtension, 'x') &&
-            file_put_contents(constant("GENERATED_FILE_RESULT")."/".$fileName.$fileExtension, $fileContent)){
-            return true;
-        }
+    if(!file_exists(constant("GENERATED_FILE_RESULT"))) {
+        mkdir(constant("GENERATED_FILE_RESULT"), 0700);
     }
+
+    if(fopen(constant("GENERATED_FILE_RESULT")."/".$fileName.$fileExtension, 'x') &&
+        file_put_contents(constant("GENERATED_FILE_RESULT")."/".$fileName.$fileExtension, $fileContent)){
+        return true;
+    }
+
     return false;
 }
 
