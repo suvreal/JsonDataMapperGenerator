@@ -7,6 +7,14 @@
  */
 class JsonDataMapperGenerator
 {
+    /**
+     * Operation type constants
+     */
+    protected const OPERATION_SAVE_AND_SHOW = 'save-and-show';
+
+    protected const OPERATION_NOSAVE_AND_SHOW = 'nosave-and-show';
+
+    protected const OPERATION_NOSAVE_AND_NOSHOW ='save-and-noshow';
 
     /**
      * Result file of generated JSON record files
@@ -82,11 +90,10 @@ class JsonDataMapperGenerator
         "distribuce" => array(),
     );
 
-
     /**
      * @var array $ResultRecords
      */
-    private array $ResultRecords;
+    private array $ResultRecords = [];
 
     /**
      * @var string|null $ResultFolder
@@ -98,22 +105,15 @@ class JsonDataMapperGenerator
      */
     private ?string $SourceFile = null;
 
-
-    public function __construct()
-    {
-
-    }
-
     /**
      * @param array $resultRecord
-     * @return JsonDataMapperGenerator|null
+     * @return JsonDataMapperGenerator
      */
-    private function setResultRecords(array $resultRecord): ?JsonDataMapperGenerator
+    private function setResultRecords(array $resultRecord): JsonDataMapperGenerator
     {
-        if($this->ResultRecords = $resultRecord){
-            return $this;
-        }
-        return null;
+        $this->ResultRecords = $resultRecord;
+
+        return $this;
     }
 
     /**
@@ -165,10 +165,10 @@ class JsonDataMapperGenerator
      */
     private function removeGeneratedContents(): void
     {
-        if(file_exists($this->getResultFolder())){
-            $files = glob($this->getResultFolder().'/*');
-            foreach($files as $file){
-                if(is_file($file)) {
+        if (file_exists($this->getResultFolder()) === true) {
+            $files = glob($this->getResultFolder() . '/*');
+            foreach ($files as $file) {
+                if (is_file($file) === true) {
                     unlink($file);
                 }
             }
@@ -185,14 +185,22 @@ class JsonDataMapperGenerator
     private function addContentsToGeneratedFolder(string $fileName, string $fileContent): bool
     {
         // Check availability of result folder & create it
-        if (!is_null($this->getResultFolder()) && !file_exists($this->getResultFolder())) {
+        if (
+            $this->getResultFolder() !== null &&
+            file_exists($this->getResultFolder()) === false
+        ) {
             mkdir($this->getResultFolder(), 0700);
         }
+
         // Put contents into set & prepared result folder
-        if(mb_strlen($fileName) > 0 && fopen($this->getResultFolder()."/".$fileName. ".json", 'x') &&
-            file_put_contents($this->getResultFolder()."/".$fileName. ".json", $fileContent)){
+        if (
+            mb_strlen($fileName) > 0 &&
+            fopen($this->getResultFolder() . "/" . $fileName . ".json", 'x') !== false &&
+            file_put_contents($this->getResultFolder() . "/" . $fileName . ".json", $fileContent) !== false
+        ) {
             return true;
         }
+
         return false;
     }
 
@@ -204,9 +212,13 @@ class JsonDataMapperGenerator
      */
     private function handleSingleRecordGenerate(array $resultRecord): bool
     {
-        if (json_last_error() === JSON_ERROR_NONE && array_key_exists("iri", $resultRecord)) {
-            return($this->addContentsToGeneratedFolder($resultRecord["iri"], json_encode($resultRecord)));
+        if (
+            json_last_error() === JSON_ERROR_NONE &&
+            array_key_exists("iri", $resultRecord) === true
+        ) {
+            return $this->addContentsToGeneratedFolder($resultRecord["iri"], json_encode($resultRecord));
         }
+
         return false;
     }
 
@@ -218,21 +230,25 @@ class JsonDataMapperGenerator
     private function handleMultiRecordGenerate(): bool
     {
         // Check if potentital data to save are available
-        if(!is_null($this->getResultRecords())){
+        if (count($this->getResultRecords()) > 0) {
+
             // Data availability is checked - prepare folder for new data deleting old data
             $this->removeGeneratedContents();
+
             // Iterate throught all obtainted data and save it
             $processedGeneration = 0;
-            foreach($this->getResultRecords() as $resultRecord){
-                if($this->handleSingleRecordGenerate($resultRecord)){ // dynamic names
+            foreach ($this->getResultRecords() as $resultRecord) {
+                if ($this->handleSingleRecordGenerate($resultRecord) === true) { // dynamic names
                     $processedGeneration++;
                 }
             }
+
             // Count all results to obtain proper return
-            if($processedGeneration == count($this->getResultRecords())){
+            if ($processedGeneration === count($this->getResultRecords())) {
                 return true;
             }
         }
+
         // If data, records not available then return false
         return false;
     }
@@ -244,11 +260,13 @@ class JsonDataMapperGenerator
      */
     private function provideGenerationResults(): ?string
     {
-        if(!is_null($returnContent = $this->getResultRecords())){
+        $returnContent = $this->getResultRecords();
+        if (count($returnContent) > 0) {
             echo("<pre>");
             var_export($returnContent);
             echo("</pre>");
         }
+
         return null;
     }
 
@@ -261,20 +279,20 @@ class JsonDataMapperGenerator
     public function processResultRecords(string $operation): ?string
     {
         // Check if data to further process are available even assuming generateFromSourceData() return
-        if($this->getResultRecords()){
-            switch($operation){
-                case"save-and-show":
+        if (count($this->getResultRecords()) > 0) {
+            switch ($operation) {
+                case self::OPERATION_SAVE_AND_SHOW:
                     // Save all obtained data & check to process show
-                    if($this->handleMultiRecordGenerate()){
+                    if ($this->handleMultiRecordGenerate() === true) {
                         return $this->provideGenerationResults();
                     }
                     return null;
-                case"nosave-and-show":
+                case self::OPERATION_NOSAVE_AND_SHOW:
                     // Write obtain data out as a return
                     return $this->provideGenerationResults();
-                case"save-and-noshow":
+                case self::OPERATION_NOSAVE_AND_NOSHOW:
                     // Save all obtained data & write out confirmation return
-                    if($this->handleMultiRecordGenerate()) {
+                    if ($this->handleMultiRecordGenerate() === true) {
                         return true;
                     }
                     return null;
@@ -282,6 +300,7 @@ class JsonDataMapperGenerator
                     return "unknown";
             }
         }
+
         // No data to process or show are available
         return null;
     }
@@ -297,33 +316,35 @@ class JsonDataMapperGenerator
     {
         // Check & set source file
         try {
-            if(mb_strlen($sourceFile) > 0){
-                if(file_exists($sourceFile)){
+            if (mb_strlen($sourceFile) > 0) {
+                if (file_exists($sourceFile) === true) {
                     $this->setSourceFile($sourceFile);
-                }else{
+                } else {
                     throw new Exception("source file does not exists - wrong name? or directory?");
                 }
-            }else{
+            } else {
                 throw new Exception("source file has to be set - no source data to process");
             }
 
-        }catch(Exception $e){
-            echo("Exception message: ".$e->getMessage());
+        } catch (Exception $e) {
+            echo("Exception message: " . $e->getMessage());
         }
+
         // Set result folder
-        try{
-            if(!is_null($resultFolder) && mb_strlen($resultFolder) > 0){
+        try {
+            if ($resultFolder !== null && mb_strlen($resultFolder) > 0) {
                 $this->setResultFolder($resultFolder);
-            }else{
-                if(property_exists($this, "GENERATED_FILE_RESULT")){
+            } else {
+                if (property_exists($this, "GENERATED_FILE_RESULT") === true) {
                     $this->setResultFolder(self::$GENERATED_FILE_RESULT);
-                }else{
+                } else {
                     throw new Exception("no result folder available");
                 }
             }
-        }catch(Exception $e){
-            echo("Exception message: ".$e->getMessage());
+        } catch (Exception $e) {
+            echo("Exception message: " . $e->getMessage());
         }
+
         // Return class instance for further work
         return $this;
     }
@@ -337,83 +358,88 @@ class JsonDataMapperGenerator
     public function generateFromSourceData(): ?JsonDataMapperGenerator
     {
         // Check if source file is available & obtains its content & decode it from JSON & check decode status
-        if(file_exists($this->getSourceFile()) &&
-            !is_null($sourceFileContents = file_get_contents($this->getSourceFile())) &&
-            ($jsonSourceFileContents = json_decode($sourceFileContents)) &&
-            (json_last_error() === JSON_ERROR_NONE)){
-
-            // Prepare result records array
-            $resultRecords = array();
-
-            // Prepare source fields
-            $expectedSourceFields = self::$EXPECTED_SOURCES_FIELDS;
-
-            // Prepare result records array
-            $resultRecord = self::$DEFAULT_TARGET_RECORD_FILE_STRUCTURE;
-
-            // Iterate through source data and expected fields to get match
-            foreach($jsonSourceFileContents as $sourceFileContentsRecord){
-                foreach($expectedSourceFields as $sourceField){
-                    if(property_exists($sourceFileContentsRecord, $sourceField)){
-                        $resultRecord = $this->obtainRecordFromSource($resultRecord, $sourceField, $sourceFileContentsRecord);
-                    }
-                }
-                // Sets new record for return array
-                $resultRecords[] = $resultRecord;
-            }
-            // Result set $this->ResultRecords - for further processing
-            if($this->setResultRecords($resultRecords)){
-                return $this;
-            }
+        $sourceFile = $this->getSourceFile();
+        $sourceFileExists = file_exists($sourceFile);
+        $sourceFileContents = file_get_contents($sourceFile);
+        if ($sourceFileExists === false && $sourceFileContents === false) {
+            return null;
         }
-        // No processed data available
-        return null;
+        $jsonSourceFileContents = json_decode($sourceFileContents);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return null;
+        }
+
+        // Prepare result records array
+        $resultRecords = array();
+
+        // Prepare source fields
+        $expectedSourceFields = self::$EXPECTED_SOURCES_FIELDS;
+
+        // Prepare result records array
+        $resultRecord = self::$DEFAULT_TARGET_RECORD_FILE_STRUCTURE;
+
+        // Iterate through source data and expected fields to get match
+        foreach ($jsonSourceFileContents as $sourceFileContentsRecord) {
+            foreach ($expectedSourceFields as $sourceField) {
+                if (property_exists($sourceFileContentsRecord, $sourceField)) {
+                    $resultRecord = $this->obtainRecordFromSource($resultRecord, $sourceField, $sourceFileContentsRecord);
+                }
+            }
+
+            // Sets new record for return array
+            $resultRecords[] = $resultRecord;
+        }
+
+        // Result set $this->ResultRecords - for further processing
+        $this->setResultRecords($resultRecords);
+
+        return $this;
     }
 
 
     /**
      * Prepare record from source to further process
      *
-     * @param $resultRecord
-     * @param $sourceField
-     * @param $sourceFileContentsRecord
+     * @param array $resultRecord
+     * @param string $sourceField
+     * @param object $sourceFileContentsRecord
      * @return array|null
      */
-    private function obtainRecordFromSource($resultRecord, $sourceField, $sourceFileContentsRecord): ?array
+    private function obtainRecordFromSource(array $resultRecord, string $sourceField, object $sourceFileContentsRecord): ?array
     {
         // Prepare distribution fields
         $expectedDistributionFields = self::$EXPECTED_DISTRIBUTION_FIELDS;
 
         // Set result record according to processing
-        if($sourceField == "extras"){
-            $resultRecord["periodicita_aktualizace"] = static::$FREQUENCY_AUTHORITY.$sourceFileContentsRecord->{$sourceField}[2]->opendata;
-        }elseif($sourceField == "uid_instance"){
+        if ($sourceField === "extras") {
+            $resultRecord["periodicita_aktualizace"] = static::$FREQUENCY_AUTHORITY . $sourceFileContentsRecord->{$sourceField}[2]->opendata;
+        } elseif ($sourceField === "uid_instance") {
             $resultRecord["iri"] = $sourceFileContentsRecord->{$sourceField};
-        }elseif($sourceField == "title"){
+        } elseif ($sourceField === "title") {
             $resultRecord["název"]["cs"] = $sourceFileContentsRecord->{$sourceField};
-        }elseif($sourceField == "description"){
+        } elseif ($sourceField === "description") {
             $resultRecord["popis"]["cs"] = $sourceFileContentsRecord->{$sourceField};
-        }elseif($sourceField == "tags"){
+        } elseif ($sourceField === "tags") {
             $resultRecord["klíčové_slovo"]["cs"] = $sourceFileContentsRecord->{$sourceField};
-        }elseif($sourceField == "temaKod"){
-            $resultRecord["téma"] = static::$RESOURCE_AUTHORITY.$sourceFileContentsRecord->{$sourceField};
-        }elseif($sourceField == "geoArea"){
+        } elseif ($sourceField === "temaKod") {
+            $resultRecord["téma"] = static::$RESOURCE_AUTHORITY . $sourceFileContentsRecord->{$sourceField};
+        } elseif ($sourceField === "geoArea") {
             $resultRecord["prvek_rúian"] = $sourceFileContentsRecord->{$sourceField};
-        }elseif($sourceField == "csv"){
-            if(!is_null($sourceFileContentsRecord->{$sourceField})){
+        } elseif ($sourceField === "csv") {
+            if (!is_null($sourceFileContentsRecord->{$sourceField})) {
                 $distributionData = array(
                     "typ" => "Distribuce"
                 );
-                if($sourceFileContentsRecord->{$sourceField}->isValid){
-                    foreach($sourceFileContentsRecord->{$sourceField} as $keyDistributionRecord => $distributionRecord){
-                        if(in_array($keyDistributionRecord, $expectedDistributionFields)) {
-                            if($keyDistributionRecord == "datafile"){
+                if ($sourceFileContentsRecord->{$sourceField}->isValid) {
+                    foreach ($sourceFileContentsRecord->{$sourceField} as $keyDistributionRecord => $distributionRecord) {
+                        if (in_array($keyDistributionRecord, $expectedDistributionFields)) {
+                            if ($keyDistributionRecord === "datafile") {
                                 $distributionData["soubor_ke_stažení"] = $distributionRecord;
                                 $distributionData["přístupové_url"] = $distributionRecord;
-                            }elseif($keyDistributionRecord == "format"){
-                                $distributionData["format"] = self::$FILETYPE_AUTHORITY.strtoupper($distributionRecord);
-                                $distributionData["typ_média"] = self::$MEDIATYPE_TEXT.$distributionRecord;
-                            }elseif($keyDistributionRecord == "specification"){
+                            } elseif ($keyDistributionRecord === "format") {
+                                $distributionData["format"] = self::$FILETYPE_AUTHORITY . strtoupper($distributionRecord);
+                                $distributionData["typ_média"] = self::$MEDIATYPE_TEXT . $distributionRecord;
+                            } elseif ($keyDistributionRecord === "specification") {
                                 $distributionData["podmínky_užití"] = array();
                                 $distributionData["typ"] = "Specifikace podmínek užití";
                                 $distributionData["podmínky_užití"]["autorské_dílo"] = $distributionRecord[0]->value;
@@ -422,7 +448,7 @@ class JsonDataMapperGenerator
                                 $distributionData["podmínky_užití"]["databáze_jako_autorské_dílo"] = $distributionRecord[1]->value;
                                 $distributionData["podmínky_užití"]["autor_databáze"]["cs"] = "Portál otevřených dat";
                                 $distributionData["podmínky_užití"]["osobní_údaje"] = $distributionRecord[3]->value;
-                            }elseif($keyDistributionRecord == "uid"){
+                            } elseif ($keyDistributionRecord === "uid") {
                                 $distributionData["iri"] = $distributionRecord;
                             }
 
@@ -435,9 +461,6 @@ class JsonDataMapperGenerator
         }
         return $resultRecord;
     }
-
-
-
 
 
 }

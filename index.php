@@ -5,9 +5,7 @@
  * Script PHP settings
  */
 declare(strict_types=1);
-error_reporting(E_ERROR | E_WARNING | E_PARSE);
-ini_set('display_errors', "1");
-ini_set('log_errors', "1");
+ini_set('display_errors', '0');
 
 
 /**
@@ -25,9 +23,10 @@ spl_autoload_register(function ($class) {
 
 /**
  * Initialize JsonDataMapperGenerator class object & perform data generation
+ * Chain order: save-and-show, save-and-noshow, nosave-and-show
  */
 (new JsonDataMapperGenerator())
     ->setSourcesAndResults("lkod-data.json", "generated-another")
     ->generateFromSourceData()
-    ->processResultRecords("save-and-show"); // save-and-show, save-and-noshow, nosave-and-show
+    ->processResultRecords("save-and-show");
 
